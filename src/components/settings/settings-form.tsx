@@ -29,7 +29,10 @@ function Section({ title, description, children }: { title: string; description?
 export function SettingsForm({ defaults }: { defaults: SettingsFormValues }) {
   const [pending, startTransition] = useTransition();
   const form = useForm<SettingsFormValues, unknown, Parsed>({ resolver: zodResolver(settingsSchema), defaultValues: defaults });
-  const [orderPrefix, quotePrefix, padding] = useWatch({ control: form.control, name: ["orderNumberPrefix", "quoteNumberPrefix", "numberPadding"] });
+  const [orderPrefix, quotePrefix, invoicePrefix, padding] = useWatch({
+    control: form.control,
+    name: ["orderNumberPrefix", "quoteNumberPrefix", "invoiceNumberPrefix", "numberPadding"],
+  });
   const pad = Math.min(6, Math.max(3, Number(padding) || 4));
   const year = new Date().getFullYear();
 
@@ -73,14 +76,16 @@ export function SettingsForm({ defaults }: { defaults: SettingsFormValues }) {
         </div>
       </Section>
       <Section title="Numeracja dokumentów" description="Numery nadaje serwer przy zapisie. Zmiana prefiksu dotyczy tylko nowych dokumentów.">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <TextField control={form.control} name="orderNumberPrefix" label="Prefiks zleceń" required />
           <TextField control={form.control} name="quoteNumberPrefix" label="Prefiks wycen" required />
+          <TextField control={form.control} name="invoiceNumberPrefix" label="Prefiks faktur" required />
           <TextField control={form.control} name="numberPadding" label="Liczba cyfr" inputMode="numeric" required />
         </div>
         <p className="text-sm text-muted-foreground">
           Przykład: <span className="font-mono text-foreground">{formatDocumentNumber(orderPrefix || "ZL", year, 1, pad)}</span>,{" "}
-          <span className="font-mono text-foreground">{formatDocumentNumber(quotePrefix || "WYC", year, 1, pad)}</span>
+          <span className="font-mono text-foreground">{formatDocumentNumber(quotePrefix || "WYC", year, 1, pad)}</span>,{" "}
+          <span className="font-mono text-foreground">{formatDocumentNumber(invoicePrefix || "FV", year, 1, pad)}</span>
         </p>
       </Section>
       <Section title="Kategorie usług" description="Jedna kategoria w wierszu. Używane w zleceniach i raportach.">

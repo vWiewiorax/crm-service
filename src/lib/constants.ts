@@ -81,3 +81,19 @@ export const VAT_RATES = defs([
 export type VatRate = (typeof VAT_RATES.values)[number];
 
 export const UNITS = ["szt.", "usł.", "godz.", "m", "m²", "kpl.", "km"] as const;
+
+export const KSEF_STATUS = defs([
+  { value: "NOT_SENT", label: "Nie wysłano", tone: "neutral" },
+  { value: "PROCESSING", label: "Przetwarzanie w KSeF", tone: "orange" },
+  { value: "ACCEPTED", label: "Przyjęta w KSeF (test)", tone: "green" },
+  { value: "REJECTED", label: "Odrzucona przez KSeF", tone: "red" },
+  { value: "ERROR", label: "Błąd wysyłki", tone: "red" },
+]);
+export type KsefStatus = (typeof KSEF_STATUS.values)[number];
+
+export const PAYMENT_METHOD = defs([
+  { value: "TRANSFER", label: "Przelew", tone: "neutral" },
+  { value: "CASH", label: "Gotówka", tone: "neutral" },
+  { value: "CARD", label: "Karta", tone: "neutral" },
+]);
+export type PaymentMethod = (typeof PAYMENT_METHOD.values)[number];

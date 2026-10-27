@@ -24,6 +24,7 @@ export default async function SettingsPage() {
           quoteValidityDays: String(s.quoteValidityDays),
           orderNumberPrefix: s.orderNumberPrefix,
           quoteNumberPrefix: s.quoteNumberPrefix,
+          invoiceNumberPrefix: s.invoiceNumberPrefix,
           numberPadding: String(s.numberPadding),
           serviceCategories: s.serviceCategories.join("\n"),
         }}
