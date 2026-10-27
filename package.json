@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "postinstall": "prisma generate",
+    "postinstall": "node scripts/ensure-env.mjs && prisma generate",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -14,7 +14,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "setup": "prisma generate && prisma migrate deploy && prisma db seed"
+    "setup": "node scripts/ensure-env.mjs && prisma generate && prisma migrate deploy && prisma db seed"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.1",

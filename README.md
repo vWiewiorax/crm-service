@@ -24,8 +24,7 @@ Demonstracyjny system obsługi zleceń dla jednoosobowej firmy usługowej (JDG):
 
 ```bash
 npm install
-cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
-npm run setup               # klient Prisma + migracje + dane demonstracyjne
+npm run setup               # tworzy .env (jeśli brak), klient Prisma, migracje, dane demo
 npm run dev
 ```
 
