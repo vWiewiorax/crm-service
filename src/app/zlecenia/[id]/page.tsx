@@ -1,4 +1,4 @@
-import { CalendarDays, FileText, History, ListChecks, Pencil } from "lucide-react";
+import { CalendarDays, FileText, History, ListChecks, Pencil, Receipt } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { DetailList, SectionCard } from "@/components/shared/section-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import { EVENT_TYPE, ORDER_STATUS, PAYMENT_STATUS, TASK_PRIORITY, TASK_STATUS } from "@/lib/constants";
+import { EVENT_TYPE, KSEF_STATUS, ORDER_STATUS, PAYMENT_STATUS, TASK_PRIORITY, TASK_STATUS } from "@/lib/constants";
 import { formatDate, formatDateTime, today } from "@/lib/dates";
 import { formatMoney, formatNumber, formatVat } from "@/lib/format";
 import { lineNet, totalsFromNet } from "@/lib/money";
@@ -47,6 +47,12 @@ export default async function OrderPage({ params }: PageProps<"/zlecenia/[id]">)
         actions={
           <>
             <OrderStatusDialog orderId={o.id} current={o.status} />
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/faktury/nowa?zlecenie=${o.id}`}>
+                <Receipt data-icon="inline-start" />
+                Wystaw fakturę
+              </Link>
+            </Button>
             <Button asChild size="sm">
               <Link href={`/zlecenia/${o.id}/edytuj`}>
                 <Pencil data-icon="inline-start" />
@@ -63,6 +69,24 @@ export default async function OrderPage({ params }: PageProps<"/zlecenia/[id]">)
           </>
         }
       />
+
+      {o.invoices.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border bg-card px-4 py-3 text-sm">
+          <span className="flex items-center gap-2 font-medium">
+            <Receipt className="size-4 text-muted-foreground" />
+            Faktury do zlecenia
+          </span>
+          {o.invoices.map((inv) => (
+            <span key={inv.id} className="flex items-center gap-2">
+              <Link href={`/faktury/${inv.id}`} className="font-mono text-xs text-primary hover:underline">
+                {inv.number}
+              </Link>
+              <span className="tabular text-muted-foreground">{formatMoney(inv.grossTotal)}</span>
+              <StatusBadge defs={KSEF_STATUS} value={inv.ksefStatus} />
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

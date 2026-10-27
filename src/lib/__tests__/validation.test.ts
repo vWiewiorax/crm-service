@@ -35,7 +35,7 @@ describe("walidacja", () => {
   it("ustawienia: kategorie z wierszy, bez duplikatów", () => {
     const r = settingsSchema.safeParse({
       companyName: "Firma", ownerName: "", address: "", nip: "", email: "", phone: "", bankAccount: "",
-      defaultVatRate: "23", paymentTermDays: "14", quoteValidityDays: "30", orderNumberPrefix: "ZL", quoteNumberPrefix: "WYC", numberPadding: "4",
+      defaultVatRate: "23", paymentTermDays: "14", quoteValidityDays: "30", orderNumberPrefix: "ZL", quoteNumberPrefix: "WYC", invoiceNumberPrefix: "FV", numberPadding: "4",
       serviceCategories: "A\nB\n\nA ",
     });
     expect(r.success).toBe(true);

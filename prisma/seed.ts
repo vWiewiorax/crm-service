@@ -40,6 +40,9 @@ function fakeNip(base: string): string {
 async function main() {
   console.log("Czyszczenie danych...");
   await db.$transaction([
+    db.invoiceItem.deleteMany(),
+    db.invoice.deleteMany(),
+    db.ksefCredential.deleteMany(),
     db.calendarEvent.deleteMany(),
     db.task.deleteMany(),
     db.orderStatusChange.deleteMany(),
@@ -322,6 +325,52 @@ async function main() {
         notes: e.notes ?? null,
         clientId: C(e.client),
         orderId: e.order !== undefined ? Ord(e.order) : null,
+      },
+    });
+  }
+
+  // Faktury (jeszcze niewysłane do KSeF) dla dwóch ostatnio zakończonych zleceń firmowych
+  const seller = await db.settings.findUniqueOrThrow({ where: { id: 1 } });
+  const toInvoice = await db.order.findMany({
+    where: { status: "COMPLETED", client: { type: "COMPANY" } },
+    include: { client: true, items: { orderBy: { position: "asc" } } },
+    orderBy: { completedAt: "desc" },
+    take: 2,
+  });
+  for (const o of toInvoice) {
+    const done = o.completedAt ?? o.createdDate;
+    const issueDate = new Date(Date.UTC(done.getUTCFullYear(), done.getUTCMonth(), done.getUTCDate()));
+    const year = issueDate.getUTCFullYear();
+    const counter = await db.counter.upsert({
+      where: { key: `invoice-${year}` },
+      create: { key: `invoice-${year}`, value: 1 },
+      update: { value: { increment: 1 } },
+    });
+    const items = o.items.length
+      ? o.items.map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit, unitPriceNet: i.unitPriceNet, vatRate: i.vatRate }))
+      : [{ name: o.title, quantity: 1, unit: "usł.", unitPriceNet: o.netAmount, vatRate: o.vatRate }];
+    const totals = documentTotals(items);
+    await db.invoice.create({
+      data: {
+        number: formatDocumentNumber(seller.invoiceNumberPrefix, year, counter.value, seller.numberPadding),
+        clientId: o.clientId,
+        orderId: o.id,
+        issueDate,
+        saleDate: issueDate,
+        dueDate: new Date(issueDate.getTime() + seller.paymentTermDays * 86_400_000),
+        placeOfIssue: "Rzeszów",
+        paymentMethod: "TRANSFER",
+        sellerName: seller.companyName,
+        sellerNip: seller.nip!,
+        sellerAddress: seller.address!,
+        sellerBankAccount: seller.bankAccount,
+        buyerName: o.client.companyName ?? o.client.name,
+        buyerNip: o.client.nip,
+        buyerAddress: o.client.address,
+        netTotal: totals.net,
+        vatTotal: totals.vat,
+        grossTotal: totals.gross,
+        items: { create: items.map((i, position) => ({ ...i, position })) },
       },
     });
   }

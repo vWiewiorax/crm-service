@@ -3,6 +3,7 @@ import {
   CLIENT_TYPE,
   EVENT_TYPE,
   ORDER_STATUS,
+  PAYMENT_METHOD,
   PAYMENT_STATUS,
   QUOTE_STATUS,
   TASK_PRIORITY,
@@ -130,6 +131,35 @@ export const quoteSchema = z
 export type QuoteFormValues = z.input<typeof quoteSchema>;
 export type QuoteInput = z.output<typeof quoteSchema>;
 
+// ---------- Faktura ----------
+export const invoiceSchema = z
+  .object({
+    clientId: requiredId("Wybierz nabywcę"),
+    orderId: optionalId,
+    issueDate: dateField("Data wystawienia"),
+    saleDate: dateField("Data sprzedaży"),
+    dueDate: dateField("Termin płatności"),
+    placeOfIssue: optionalText(100),
+    paymentMethod: z.enum(PAYMENT_METHOD.values),
+    vatExemptionBasis: optionalText(256),
+    notes: optionalText(256),
+    items: z.array(quoteItemSchema).min(1, "Dodaj co najmniej jedną pozycję").max(50, "Maksymalnie 50 pozycji"),
+  })
+  .superRefine((v, ctx) => {
+    if (v.dueDate < v.issueDate) {
+      ctx.addIssue({ code: "custom", path: ["dueDate"], message: "Termin płatności nie może być wcześniejszy niż data wystawienia" });
+    }
+    if (v.items.some((i) => i.vatRate === "zw") && !v.vatExemptionBasis) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["vatExemptionBasis"],
+        message: "Przy stawce zw. podaj podstawę prawną zwolnienia z VAT",
+      });
+    }
+  });
+export type InvoiceFormValues = z.input<typeof invoiceSchema>;
+export type InvoiceInput = z.output<typeof invoiceSchema>;
+
 // ---------- Zadanie ----------
 export const taskSchema = z.object({
   title: requiredText("Tytuł", 200),
@@ -198,6 +228,7 @@ export const settingsSchema = z.object({
   quoteValidityDays: intField("Ważność wyceny", 1, 365),
   orderNumberPrefix: prefix("Prefiks zleceń"),
   quoteNumberPrefix: prefix("Prefiks wycen"),
+  invoiceNumberPrefix: prefix("Prefiks faktur"),
   numberPadding: intField("Liczba cyfr", 3, 6),
   serviceCategories: z
     .string()

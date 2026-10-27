@@ -117,6 +117,7 @@ export async function getOrder(id: string) {
       tasks: { orderBy: [{ status: "asc" }, { dueDate: { sort: "asc", nulls: "last" } }] },
       events: { orderBy: { date: "asc" } },
       quote: { select: { id: true, number: true, title: true } },
+      invoices: { select: { id: true, number: true, grossTotal: true, ksefStatus: true }, orderBy: { createdAt: "desc" } },
     },
   });
 }

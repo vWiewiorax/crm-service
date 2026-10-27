@@ -2,7 +2,13 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { formatDocumentNumber } from "@/lib/numbering-format";
 
-export type DocumentKind = "order" | "quote";
+export type DocumentKind = "order" | "quote" | "invoice";
+
+function prefixFor(kind: DocumentKind, settings: { orderNumberPrefix: string; quoteNumberPrefix: string; invoiceNumberPrefix: string } | null) {
+  if (kind === "order") return settings?.orderNumberPrefix ?? "ZL";
+  if (kind === "quote") return settings?.quoteNumberPrefix ?? "WYC";
+  return settings?.invoiceNumberPrefix ?? "FV";
+}
 
 export { formatDocumentNumber };
 
@@ -24,7 +30,7 @@ export async function nextDocumentNumber(
     update: { value: { increment: 1 } },
   });
   const settings = await tx.settings.findUnique({ where: { id: 1 } });
-  const prefix = kind === "order" ? (settings?.orderNumberPrefix ?? "ZL") : (settings?.quoteNumberPrefix ?? "WYC");
+  const prefix = prefixFor(kind, settings);
   return formatDocumentNumber(prefix, year, counter.value, settings?.numberPadding ?? 4);
 }
 
@@ -37,7 +43,7 @@ export async function peekNextNumber(
     client.counter.findUnique({ where: { key: `${kind}-${year}` } }),
     client.settings.findUnique({ where: { id: 1 } }),
   ]);
-  const prefix = kind === "order" ? (settings?.orderNumberPrefix ?? "ZL") : (settings?.quoteNumberPrefix ?? "WYC");
+  const prefix = prefixFor(kind, settings);
   return formatDocumentNumber(prefix, year, (counter?.value ?? 0) + 1, settings?.numberPadding ?? 4);
 }
 

@@ -25,6 +25,7 @@ model Settings {
   quoteValidityDays  Int      @default(30)
   orderNumberPrefix  String   @default("ZL")
   quoteNumberPrefix  String   @default("WYC")
+  invoiceNumberPrefix String  @default("FV")
   numberPadding      Int      @default(4)
   serviceCategories  String   @default("[]") // JSON: string[]
   updatedAt          DateTime @updatedAt
@@ -51,6 +52,7 @@ model Client {
   quotes      Quote[]
   tasks       Task[]
   events      CalendarEvent[]
+  invoices    Invoice[]
 
   @@index([name])
 }
@@ -79,6 +81,7 @@ model Order {
   statusHistory OrderStatusChange[]
   tasks         Task[]
   events        CalendarEvent[]
+  invoices      Invoice[]
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
@@ -188,4 +191,72 @@ model CalendarEvent {
   updatedAt DateTime @updatedAt
 
   @@index([date])
+}
+
+model Invoice {
+  id                    String        @id @default(cuid())
+  number                String        @unique
+  clientId              String
+  client                Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  orderId               String?
+  order                 Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  issueDate             DateTime // dateOnly
+  saleDate              DateTime // dateOnly
+  dueDate               DateTime // dateOnly
+  placeOfIssue          String?
+  paymentMethod         String        @default("TRANSFER") // TRANSFER | CASH | CARD
+  vatExemptionBasis     String?
+  notes                 String?
+  // Dane sprzedawcy i nabywcy zapisane w chwili wystawienia (faktura nie zmienia się po edycji klienta)
+  sellerName            String
+  sellerNip             String
+  sellerAddress         String
+  sellerBankAccount     String?
+  buyerName             String
+  buyerNip              String?
+  buyerAddress          String?
+  netTotal              Int           @default(0)
+  vatTotal              Int           @default(0)
+  grossTotal            Int           @default(0)
+  // KSeF (wyłącznie środowisko testowe)
+  ksefStatus            String        @default("NOT_SENT") // NOT_SENT | PROCESSING | ACCEPTED | REJECTED | ERROR
+  ksefNumber            String?
+  ksefSessionRef        String?
+  ksefInvoiceRef        String?
+  ksefStatusCode        Int?
+  ksefStatusDescription String?
+  ksefSentAt            DateTime?
+  ksefAcceptedAt        DateTime?
+  ksefXml               String?
+  upoXml                String?
+  items                 InvoiceItem[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([clientId])
+  @@index([orderId])
+  @@index([ksefStatus])
+}
+
+model InvoiceItem {
+  id           String  @id @default(cuid())
+  invoiceId    String
+  invoice      Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  position     Int
+  name         String
+  quantity     Float
+  unit         String
+  unitPriceNet Int
+  vatRate      String
+
+  @@index([invoiceId])
+}
+
+/// Samopodpisany certyfikat do uwierzytelniania w testowym KSeF (generowany automatycznie, tylko środowisko TEST).
+model KsefCredential {
+  id        Int      @id @default(1)
+  nip       String
+  certPem   String
+  keyPem    String
+  createdAt DateTime @default(now())
 }
