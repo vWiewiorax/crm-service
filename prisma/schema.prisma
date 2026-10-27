@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Kwoty przechowywane są w groszach (Int), aby uniknąć błędów zaokrągleń.
+// Pola "dateOnly" (termin, data utworzenia itp.) zapisywane są jako północ UTC danego dnia.
+
+model Settings {
+  id                 Int      @id @default(1)
+  companyName        String
+  ownerName          String?
+  address            String?
+  nip                String?
+  email              String?
+  phone              String?
+  bankAccount        String?
+  defaultVatRate     String   @default("23")
+  currency           String   @default("PLN")
+  paymentTermDays    Int      @default(14)
+  quoteValidityDays  Int      @default(30)
+  orderNumberPrefix  String   @default("ZL")
+  quoteNumberPrefix  String   @default("WYC")
+  numberPadding      Int      @default(4)
+  serviceCategories  String   @default("[]") // JSON: string[]
+  updatedAt          DateTime @updatedAt
+}
+
+model Counter {
+  key   String @id // np. "order-2026"
+  value Int    @default(0)
+}
+
+model Client {
+  id          String          @id @default(cuid())
+  type        String          @default("PRIVATE") // PRIVATE | COMPANY
+  name        String
+  companyName String?
+  email       String?
+  phone       String?
+  address     String?
+  nip         String?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  orders      Order[]
+  quotes      Quote[]
+  tasks       Task[]
+  events      CalendarEvent[]
+
+  @@index([name])
+}
+
+model Order {
+  id            String               @id @default(cuid())
+  number        String               @unique
+  title         String
+  description   String?
+  clientId      String
+  client        Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  category      String
+  createdDate   DateTime // data utworzenia/przyjęcia zlecenia (dateOnly)
+  dueDate       DateTime? // planowany termin realizacji (dateOnly)
+  status        String               @default("NEW")
+  netAmount     Int                  @default(0)
+  vatRate       String               @default("23")
+  paymentStatus String               @default("UNPAID") // UNPAID | PARTIAL | PAID
+  paidAmount    Int                  @default(0) // kwota brutto faktycznie wpłacona
+  paidAt        DateTime?
+  completedAt   DateTime?
+  internalNotes String?
+  quoteId       String?              @unique
+  quote         Quote?               @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  statusHistory OrderStatusChange[]
+  tasks         Task[]
+  events        CalendarEvent[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model OrderItem {
+  id           String @id @default(cuid())
+  orderId      String
+  order        Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  position     Int
+  name         String
+  quantity     Float
+  unit         String
+  unitPriceNet Int
+  vatRate      String
+
+  @@index([orderId])
+}
+
+model OrderStatusChange {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  note       String?
+  changedAt  DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model Quote {
+  id          String      @id @default(cuid())
+  number      String      @unique
+  clientId    String
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  title       String
+  description String?
+  issueDate   DateTime // dateOnly
+  validUntil  DateTime // dateOnly
+  status      String      @default("DRAFT")
+  notes       String?
+  netTotal    Int         @default(0)
+  vatTotal    Int         @default(0)
+  grossTotal  Int         @default(0)
+  sentAt      DateTime?
+  decidedAt   DateTime?
+  items       QuoteItem[]
+  order       Order?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model QuoteItem {
+  id           String @id @default(cuid())
+  quoteId      String
+  quote        Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  position     Int
+  name         String
+  quantity     Float
+  unit         String
+  unitPriceNet Int
+  vatRate      String
+
+  @@index([quoteId])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime? // dateOnly
+  priority    String    @default("NORMAL") // LOW | NORMAL | HIGH
+  status      String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  clientId    String?
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  orderId     String?
+  order       Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model CalendarEvent {
+  id        String   @id @default(cuid())
+  type      String // VISIT | REMINDER
+  title     String
+  date      DateTime // dateOnly
+  startTime String? // "HH:MM"
+  endTime   String? // "HH:MM"
+  location  String?
+  notes     String?
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
